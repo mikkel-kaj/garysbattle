@@ -6,11 +6,18 @@ public sealed class TopDownCamera : Component
 	[Property] public GameObject Target { get; set; }
 	[Property] public float Height { get; set; } = 500f;
 	[Property] public float BackwardOffset { get; set; } = 60f;
-	
+
+	// Wait a few frames before aiming so the camera projection matrix is valid
+	private int warmupFrames;
+	private bool cameraReady;
+
 	protected override void OnUpdate()
 	{
 		// Don't do anything if we haven't assigned a Target in the inspector
 		if ( Target is null ) return;
+
+		if ( !cameraReady )
+			warmupFrames++;
 
 		Mouse.Visibility = MouseVisibility.Visible;
 		
@@ -53,6 +60,13 @@ public sealed class TopDownCamera : Component
 		WorldRotation = Rotation.LookAt( targetPos - WorldPosition );
 		
 		// --- Mouse Aim ---
+		// Skip first few frames — camera projection matrix isn't valid until it has rendered
+		if ( !cameraReady )
+		{
+			if ( warmupFrames < 3 ) return;
+			cameraReady = true;
+		}
+
 		var camera = Scene.Camera;
 		if ( camera is null ) return;
 
