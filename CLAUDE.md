@@ -137,29 +137,30 @@ public sealed class TopDownCamera : Component
 
         Mouse.Visibility = MouseVisibility.Visible;
 
+        // Camera follows player from above and slightly behind
         var targetPos = Target.WorldPosition;
         var offset = Vector3.Backward * BackwardOffset + Vector3.Up * Height;
         WorldPosition = targetPos + offset;
         WorldRotation = Rotation.LookAt( targetPos - WorldPosition );
 
         // --- Mouse Aim ---
+        // Convert mouse screen position to a world direction for the player to face.
+        // Uses camera.PointToScreenPixels to get player's screen pos (same space as Mouse.Position)
+        // then projects the screen delta onto the ground plane using the camera's basis vectors.
         var camera = Scene.Camera;
         if ( camera is null ) return;
 
         var playerScreenPos = camera.PointToScreenPixels( Target.WorldPosition );
         var playerToCursor = Mouse.Position - playerScreenPos;
 
-        var worldRight = camera.WorldRotation.Right.WithZ( 0 ).Normal;
+        var worldLeft = camera.WorldRotation.Left.WithZ( 0 ).Normal;
         var worldForward = camera.WorldRotation.Forward.WithZ( 0 ).Normal;
-        var worldDirection = (worldRight * -playerToCursor.x - worldForward * playerToCursor.y).Normal;
+        var worldDirection = (worldLeft * playerToCursor.x - worldForward * playerToCursor.y).Normal;
 
         if ( worldDirection.Length > 0.1f )
         {
             Target.WorldRotation = Rotation.LookAt( worldDirection );
         }
-
-        // --- Shooting (TODO) ---
-        // Next step: spawn projectile on Input.Pressed("attack1")
     }
 }
 ```
