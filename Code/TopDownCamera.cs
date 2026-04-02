@@ -66,10 +66,10 @@ public sealed class TopDownCamera : Component
 		// Convert screen direction to world direction using camera's orientation
 		// Camera's right vector = "screen X" in world space
 		// Camera's forward vector = "screen Y" in world space (inverted because screen Y goes down)
-		var worldRight = camera.WorldRotation.Right.WithZ( 0 ).Normal;
+		var worldLeft = camera.WorldRotation.Left.WithZ( 0 ).Normal;
 		var worldForward = camera.WorldRotation.Forward.WithZ( 0 ).Normal;
 
-		var worldDirection = (worldRight * -playerToCursor.x - worldForward * playerToCursor.y).Normal;
+		var worldDirection = (worldLeft * playerToCursor.x - worldForward * playerToCursor.y).Normal;
 
 		if ( worldDirection.Length > 0.1f )
 		{
