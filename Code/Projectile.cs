@@ -4,7 +4,7 @@ using Sandbox;
 /// A projectile that moves forward in the direction it's facing and self-destructs after a lifetime.
 /// Attach to a GameObject with a ModelRenderer (the visible bullet) and a Collider set to Trigger mode.
 /// </summary>
-public sealed class Projectile : Component
+public sealed class Projectile : Component, Component.ITriggerListener
 {
 	/// <summary>How fast the projectile moves (units per second).</summary>
 	[Property] public float Speed { get; set; } = 1000f;
@@ -37,5 +37,16 @@ public sealed class Projectile : Component
 		{
 			GameObject.Destroy();
 		}
+	}
+
+	public void OnTriggerEnter( Collider self, GameObject other )
+	{
+		var damageable = other.Components.Get<IDamageable>();
+		if ( damageable is null ) return;
+
+		var damageInfo = new DamageInfo( 25f, GameObject, GameObject );
+		damageable.OnDamage( damageInfo );
+
+		GameObject.Destroy();
 	}
 }
