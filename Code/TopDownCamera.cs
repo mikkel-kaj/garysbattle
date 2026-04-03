@@ -1,93 +1,99 @@
 using Sandbox;
 
+/// <summary>
+/// Top-down camera that follows a target and rotates it to face the mouse cursor.
+/// Attach to a GameObject with a CameraComponent.
+/// </summary>
 public sealed class TopDownCamera : Component
 {
-	
 	[Property] public GameObject Target { get; set; }
 	[Property] public float Height { get; set; } = 500f;
 	[Property] public float BackwardOffset { get; set; } = 60f;
 
-	// Wait a few frames before aiming so the camera projection matrix is valid
 	private int warmupFrames;
 	private bool cameraReady;
 
 	protected override void OnUpdate()
 	{
-		// Don't do anything if we haven't assigned a Target in the inspector
 		if ( Target is null ) return;
-
-		if ( !cameraReady )
-			warmupFrames++;
+		if ( !cameraReady ) warmupFrames++;
 
 		Mouse.Visibility = MouseVisibility.Visible;
-		
-		// Get the player's current position in the world (x, y, z coordinates)
-		var targetPos = Target.WorldPosition;
 
-		// Calculate where the camera should sit relative to the player.
-		//
-		// In s&box: X = forward/backward, Y = left/right, Z = up/down
-		//
-		// Vector3.Backward * BackwardOffset:
-		//   Vector3.Backward is (-1, 0, 0) — pointing away from "forward"
-		//   Multiplying by BackwardOffset (60) gives (-60, 0, 0)
-		//   This pushes the camera 60 units "behind" the player
-		//   This creates the slight tilt — without it, you'd look straight down
-		//
-		// Vector3.Up * Height:
-		//   Vector3.Up is (0, 0, 1) — pointing straight up
-		//   Multiplying by Height (500) gives (0, 0, 500)
-		//   This lifts the camera 500 units above the player
-		//
-		// Combined: offset = (-60, 0, 500)
-		//   The camera ends up high above and slightly behind the player
-		var offset = Vector3.Backward * BackwardOffset + Vector3.Up * Height;
+		FollowTarget();
 
-		// Place the camera at the player's position + the offset we calculated
-		// If the player is at (100, 200, 0), the camera ends up at (40, 200, 500)
-		// Every frame this updates, so the camera follows the player as they move
-		WorldPosition = targetPos + offset;
-
-		// Make the camera look toward the player.
-		//
-		// targetPos - WorldPosition = the direction vector FROM the camera TO the player
-		// Example: (100, 200, 0) - (40, 200, 500) = (60, 0, -500)
-		//   That's a vector pointing forward and steeply downward — exactly where the player is
-		//
-		// Rotation.LookAt() converts that direction vector into a rotation
-		//   so the camera's "forward" axis points along that direction
-		//   Result: camera aims down at the player from above
-		WorldRotation = Rotation.LookAt( targetPos - WorldPosition );
-		
-		// --- Mouse Aim ---
-		// Skip first few frames — camera projection matrix isn't valid until it has rendered
 		if ( !cameraReady )
 		{
+			// Camera needs a few rendered frames before its projection matrix is valid
 			if ( warmupFrames < 3 ) return;
 			cameraReady = true;
 		}
 
+		AimTargetAtMouse();
+	}
+
+	/// <summary>
+	/// Positions the camera above and behind the target, looking down at it.
+	///
+	///   Side view:        Camera
+	///                    /
+	///        Height     /  (camera looks along this line)
+	///          |       /
+	///          |      /
+	///          |     /
+	///          Target──────
+	///            BackwardOffset
+	/// </summary>
+	private void FollowTarget()
+	{
+		var targetPos = Target.WorldPosition;
+
+		// Offset = (-BackwardOffset, 0, +Height) relative to target
+		var offset = Vector3.Backward * BackwardOffset + Vector3.Up * Height;
+		WorldPosition = targetPos + offset;
+
+		// Point the camera from its position toward the target
+		WorldRotation = Rotation.LookAt( targetPos - WorldPosition );
+	}
+
+	/// <summary>
+	/// Rotates the target to face the mouse cursor on the ground plane.
+	///
+	/// Approach: project the target's world position to screen pixels, compute a 2D delta
+	/// to the mouse, then convert that delta to a 3D ground direction using the camera's
+	/// orientation as a basis (change of basis from screen space to world space).
+	///
+	///   Screen (pixels)          World (ground plane)
+	///   ┌──────────────┐              ↑ forward
+	///   │         ✕    │              │    ◆ aim
+	///   │       ↗      │  ────────►   ●──↗
+	///   │     ●        │            target
+	///   └──────────────┘
+	///   delta = mouse - target     direction = left·Δx - forward·Δy
+	/// </summary>
+	private void AimTargetAtMouse()
+	{
 		var camera = Scene.Camera;
 		if ( camera is null ) return;
 
-		// Project the player's world position onto the screen (same space as Mouse.Position)
-		// This way both coordinates use the same pixel space, so any editor offset cancels out
+		// Both PointToScreenPixels and Mouse.Position use window-pixel coordinates,
+		// so subtracting them cancels out any editor viewport offset
 		var playerScreenPos = camera.PointToScreenPixels( Target.WorldPosition );
-
-		// Screen-space direction from player to mouse cursor
 		var playerToCursor = Mouse.Position - playerScreenPos;
 
-		// Convert screen direction to world direction using camera's orientation
-		// Camera's right vector = "screen X" in world space
-		// Camera's forward vector = "screen Y" in world space (inverted because screen Y goes down)
+		// Camera basis vectors projected flat onto the ground (Z=0, then re-normalized).
+		// These map screen axes → world axes regardless of camera tilt.
+		//   Screen +X (right)  → worldLeft  (s&box screen X is mirrored vs world Y)
+		//   Screen +Y (down)   → -worldForward (screen Y is inverted vs world forward)
 		var worldLeft = camera.WorldRotation.Left.WithZ( 0 ).Normal;
 		var worldForward = camera.WorldRotation.Forward.WithZ( 0 ).Normal;
 
-		var worldDirection = (worldLeft * playerToCursor.x - worldForward * playerToCursor.y).Normal;
+		// Change of basis: 2D pixel delta → 3D ground direction
+		var aimDirection = (worldLeft * playerToCursor.x - worldForward * playerToCursor.y).Normal;
 
-		if ( worldDirection.Length > 0.1f )
+		if ( aimDirection.Length > 0.1f )
 		{
-			Target.WorldRotation = Rotation.LookAt( worldDirection );
+			Target.WorldRotation = Rotation.LookAt( aimDirection );
 		}
 	}
 }
