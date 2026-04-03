@@ -6,7 +6,7 @@
       "__version": 2,
       "Flags": 0,
       "Name": "Main Camera",
-      "Position": "-300,0,100",
+      "Position": "-300,0,117.0237",
       "Rotation": "0,0,0,1",
       "Scale": "1,1,1",
       "Tags": "",
@@ -381,7 +381,7 @@
           "__type": "Sandbox.PlayerController",
           "__guid": "b831a06d-957a-4e91-9134-a80b442c246f",
           "__enabled": true,
-          "Flags": 0,
+          "Flags": 512,
           "AccelerationTime": 0,
           "AimStrengthBody": 1,
           "AimStrengthEyes": 1,
@@ -441,7 +441,7 @@
           "ShowRigidbodyComponent": false,
           "ThirdPerson": true,
           "ToggleCameraModeButton": "view",
-          "UseAnimatorControls": true,
+          "UseAnimatorControls": false,
           "UseButton": "use",
           "UseCameraControls": false,
           "UseFovFromPreferences": true,
@@ -910,7 +910,7 @@
     "GameObjectSystems": {
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "fbb5d682-d519-40ed-a250-c9f4b7dca88c"
+          "$blob": "48bdd5e5-4639-413f-8517-ad3361a838e9"
         }
       },
       "Sandbox.MovieMaker.MovieRecorderSystem": {

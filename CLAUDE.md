@@ -124,42 +124,71 @@ SBOX_ENGINE_DOCS.md    — Complete s&box engine documentation
 ### TopDownCamera.cs (current)
 ```csharp
 using Sandbox;
+using Sandbox.Citizen;
 
 public sealed class TopDownCamera : Component
 {
     [Property] public GameObject Target { get; set; }
     [Property] public float Height { get; set; } = 500f;
     [Property] public float BackwardOffset { get; set; } = 60f;
+    [Property] public bool ShowDebugVectors { get; set; } = false;
 
     protected override void OnUpdate()
     {
         if ( Target is null ) return;
-
         Mouse.Visibility = MouseVisibility.Visible;
+        FollowTarget();
+        AimTargetAtMouse();
+    }
 
-        // Camera follows player from above and slightly behind
+    private void FollowTarget()
+    {
         var targetPos = Target.WorldPosition;
         var offset = Vector3.Backward * BackwardOffset + Vector3.Up * Height;
         WorldPosition = targetPos + offset;
         WorldRotation = Rotation.LookAt( targetPos - WorldPosition );
+    }
 
-        // --- Mouse Aim ---
-        // Convert mouse screen position to a world direction for the player to face.
-        // Uses camera.PointToScreenPixels to get player's screen pos (same space as Mouse.Position)
-        // then projects the screen delta onto the ground plane using the camera's basis vectors.
+    private void AimTargetAtMouse()
+    {
         var camera = Scene.Camera;
         if ( camera is null ) return;
 
-        var playerScreenPos = camera.PointToScreenPixels( Target.WorldPosition );
-        var playerToCursor = Mouse.Position - playerScreenPos;
+        // Camera looks at target, so target ≈ screen center
+        var screenCenter = Screen.Size / 2f;
+        var playerToCursor = Mouse.Position - screenCenter;
 
-        var worldLeft = camera.WorldRotation.Left.WithZ( 0 ).Normal;
-        var worldForward = camera.WorldRotation.Forward.WithZ( 0 ).Normal;
-        var worldDirection = (worldLeft * playerToCursor.x - worldForward * playerToCursor.y).Normal;
+        // Camera basis vectors flattened onto ground plane
+        var screenRight = camera.WorldRotation.Right.WithZ( 0 ).Normal;
+        var screenUp = camera.WorldRotation.Up.WithZ( 0 ).Normal;
 
-        if ( worldDirection.Length > 0.1f )
+        // Change of basis: screen pixels → world ground direction
+        var aimDirection = (screenRight * playerToCursor.x - screenUp * playerToCursor.y).Normal;
+
+        if ( aimDirection.Length > 0.1f )
         {
-            Target.WorldRotation = Rotation.LookAt( worldDirection );
+            Target.WorldRotation = Rotation.LookAt( aimDirection );
+
+            // Sync EyeAngles so swim/climb modes move in the facing direction
+            var pc = Target.GetComponent<PlayerController>();
+            if ( pc is not null )
+                pc.EyeAngles = Target.WorldRotation.Angles();
+        }
+
+        // Drive animations manually (UseAnimatorControls is off to prevent rotation fighting)
+        var renderer = Target.GetComponentInChildren<SkinnedModelRenderer>();
+        if ( renderer is not null )
+        {
+            var pc = Target.GetComponent<PlayerController>();
+            if ( pc is not null )
+            {
+                var helper = new CitizenAnimationHelper();
+                helper.Target = renderer;
+                helper.WithVelocity( pc.Velocity );
+                helper.IsGrounded = pc.IsOnGround;
+                helper.IsSwimming = pc.IsSwimming;
+                helper.IsClimbing = pc.IsClimbing;
+            }
         }
     }
 }
@@ -167,10 +196,12 @@ public sealed class TopDownCamera : Component
 
 ### Scene: "First Scene"
 - **Main Camera** — CameraComponent + TopDownCamera (Target = Player Controller)
-- **Player Controller** — PlayerController (UseCameraControls=false, UseLookControls=false, UseAnimatorControls=false, UseInputControls=true), Rigidbody, MoveModeWalk, Dresser, tag: "player"
+- **Player Controller** — PlayerController, Rigidbody, MoveModeWalk, MoveModeSwim, MoveModeLadder, Dresser, tag: "player"
+  - Settings: UseCameraControls=false, UseLookControls=false, UseAnimatorControls=false, UseInputControls=true, RotationAngleLimit=360, RotationSpeed=10
   - **Body** — SkinnedModelRenderer (citizen model)
   - **Colliders** — CapsuleCollider + BoxCollider
 - **modular-floor** — Prop (the arena ground)
+- **Water** — ModelRenderer + BoxCollider (tagged #water)
 - **Sun** — DirectionalLight
 - Lights (Point, Spot, Directional)
 
@@ -202,9 +233,41 @@ public sealed class TopDownCamera : Component
 8. **Arena map** — Proper circular arena with walls and obstacles
 
 ## Important Gotchas Learned
-- **Mouse.Position vs ScreenPixelToRay**: `Mouse.Position` uses window coordinates but `ScreenPixelToRay` expects viewport coordinates. They don't match in the editor. **Solution**: Use `camera.PointToScreenPixels(worldPos)` to get the player's screen position, then compute the delta to `Mouse.Position` — both are in the same space so the offset cancels out.
-- **PlayerController overrides**: When using a custom camera/aim system, disable `UseCameraControls`, `UseLookControls`, AND `UseAnimatorControls` on the PlayerController component — otherwise it fights your rotation code.
-- **s&box coordinate system**: X = forward, Y = left, Z = up. `Vector3.Forward = (1,0,0)`, `Vector3.Up = (0,0,1)`.
-- **Camera orientation to screen mapping**: Camera's Right/Forward vectors have Z components because the camera is tilted. Use `.WithZ(0).Normal` to flatten them to the ground plane when converting screen directions to world directions.
-- **Save scenes often**: Ctrl+S. Property changes in the editor don't persist without saving.
+
+### Mouse & Screen Coordinates
+- **Mouse.Position vs ScreenPixelToRay**: `Mouse.Position` uses window coordinates but `ScreenPixelToRay` expects viewport coordinates. They don't match in the editor (known bug: [sbox-public#2890](https://github.com/Facepunch/sbox-public/issues/2890)). **Solution**: Use `Screen.Size / 2f` as screen center instead of `camera.PointToScreenPixels()`. Since the camera always looks at the target, the target is always at screen center. This avoids the viewport offset issue entirely.
 - **Mouse cursor**: Set `Mouse.Visibility = MouseVisibility.Visible` every frame in OnUpdate to keep cursor visible in a top-down game.
+
+### PlayerController Settings (for top-down games)
+- **UseCameraControls** → false (we control the camera)
+- **UseLookControls** → false (we control aim via mouse, not FPS mouse-look)
+- **UseAnimatorControls** → false (bundles animations AND rotation — can't separate them. We drive animations manually via `CitizenAnimationHelper` instead)
+- **UseInputControls** → true (WASD movement still handled by PlayerController)
+- **RotationAngleLimit** → 360 (prevents rotation capping, especially in swim mode)
+- **RotationSpeed** → 10 (fast rotation snap)
+
+### EyeAngles
+- When `UseLookControls` is off, `EyeAngles` stays at (0,0,0). But swim/climb modes use `EyeAngles` to determine movement direction. **Solution**: Manually set `pc.EyeAngles = Target.WorldRotation.Angles()` after setting rotation, so movement modes know which way the player is facing.
+
+### Animations Without UseAnimatorControls
+- Use `CitizenAnimationHelper` to drive citizen animations manually:
+  ```csharp
+  var helper = new CitizenAnimationHelper();
+  helper.Target = renderer;  // SkinnedModelRenderer
+  helper.WithVelocity( pc.Velocity );
+  helper.IsGrounded = pc.IsOnGround;
+  helper.IsSwimming = pc.IsSwimming;
+  helper.IsClimbing = pc.IsClimbing;
+  ```
+- Constructor takes 0 arguments. Set `Target` as a property, not a constructor param.
+
+### Coordinate Systems
+- **s&box world**: X = forward, Y = left, Z = up. `Vector3.Forward = (1,0,0)`, `Vector3.Up = (0,0,1)`.
+- **Screen**: X = right (pixels), Y = down (pixels). Screen Y is inverted vs world forward.
+- **Camera basis to screen mapping**: Camera's Right/Up vectors have Z components because the camera is tilted. Use `.WithZ(0).Normal` to flatten them to the ground plane when converting screen directions to world directions.
+- **Gizmo.Draw**: Has axes flipped vs game world (X axis is inverted). Debug arrows need per-axis negation corrections to match visual screen directions. Don't use Gizmo arrows to reason about game math — they have their own coordinate quirks.
+- **UseAnimatorControls flips axis mapping**: When toggling `UseAnimatorControls`, the correct basis vector for screenRight changes between `camera.WorldRotation.Left` and `camera.WorldRotation.Right`. Current (with UseAnimatorControls=false): uses `.Right`.
+
+### General
+- **Save scenes often**: Ctrl+S. Property changes in the editor don't persist without saving.
+- **Scene properties reset**: If you don't save, properties like UseLookControls/UseAnimatorControls revert to defaults on editor restart.
