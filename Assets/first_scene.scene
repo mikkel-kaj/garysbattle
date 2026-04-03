@@ -59,6 +59,7 @@
           "OnComponentFixedUpdate": null,
           "OnComponentStart": null,
           "OnComponentUpdate": null,
+          "ShowDebugVectors": true,
           "Target": {
             "_type": "gameobject",
             "go": "7d2923d4-72bc-4332-a1d1-b99f34d95ce5"
@@ -909,7 +910,7 @@
     "GameObjectSystems": {
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "3c52fe0b-4741-4d07-ba0e-134549341fff"
+          "$blob": "04f03c51-ec66-4f08-aa8a-b80ae694502a"
         }
       },
       "Sandbox.MovieMaker.MovieRecorderSystem": {
