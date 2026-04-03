@@ -108,7 +108,8 @@ var obj = Scene.Directory.FindByName( "Player" ).First();
 ```
 Code/
   Assembly.cs          — Global usings (Sandbox, System, etc.)
-  TopDownCamera.cs     — Top-down camera + mouse aiming
+  TopDownCamera.cs     — Top-down camera + mouse aiming + manual animations
+  BoneAttachment.cs    — Attach props to skeleton bones (ExecuteInEditor)
 Editor/
   Assembly.cs          — Editor global usings
   MyEditorMenu.cs      — Default editor menu
@@ -198,7 +199,9 @@ public sealed class TopDownCamera : Component
 - **Main Camera** — CameraComponent + TopDownCamera (Target = Player Controller)
 - **Player Controller** — PlayerController, Rigidbody, MoveModeWalk, MoveModeSwim, MoveModeLadder, Dresser, tag: "player"
   - Settings: UseCameraControls=false, UseLookControls=false, UseAnimatorControls=false, UseInputControls=true, RotationAngleLimit=360, RotationSpeed=10
-  - **Body** — SkinnedModelRenderer (citizen model)
+  - **Body** — SkinnedModelRenderer (citizen model, CreateBoneObjects=true)
+    - **batmanmask** — SkinnedModelRenderer (BoneMergeTarget=Body)
+    - **foodkit_meat-sausage** — Prop + BoneAttachment (attached to "head" bone)
   - **Colliders** — CapsuleCollider + BoxCollider
 - **modular-floor** — Prop (the arena ground)
 - **Water** — ModelRenderer + BoxCollider (tagged #water)
@@ -267,6 +270,12 @@ public sealed class TopDownCamera : Component
 - **Camera basis to screen mapping**: Camera's Right/Up vectors have Z components because the camera is tilted. Use `.WithZ(0).Normal` to flatten them to the ground plane when converting screen directions to world directions.
 - **Gizmo.Draw**: Has axes flipped vs game world (X axis is inverted). Debug arrows need per-axis negation corrections to match visual screen directions. Don't use Gizmo arrows to reason about game math — they have their own coordinate quirks.
 - **UseAnimatorControls flips axis mapping**: When toggling `UseAnimatorControls`, the correct basis vector for screenRight changes between `camera.WorldRotation.Left` and `camera.WorldRotation.Right`. Current (with UseAnimatorControls=false): uses `.Right`.
+
+### Bone Attachments
+- **CreateBoneObjects** must be `true` on the SkinnedModelRenderer for `GetBoneObject()` to work. Without it, all 95 bones return null.
+- **BoneMergeTarget** only works on `SkinnedModelRenderer` (skinned models with matching bones). For regular props, use the `BoneAttachment` component or parent to a bone GameObject.
+- **GetBoneObject(string)** or **GetBoneObject(int)** returns a GameObject for the bone. Key citizen bone names: `head`, `hold_R`, `hold_L`, `hand_R`, `hand_L`, `spine_2`, `pelvis`.
+- **Component.ExecuteInEditor** makes a component's OnUpdate run in the editor, useful for live-previewing attachments.
 
 ### General
 - **Save scenes often**: Ctrl+S. Property changes in the editor don't persist without saving.

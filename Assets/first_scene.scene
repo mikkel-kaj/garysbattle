@@ -427,6 +427,19 @@
           "RemoveUnownedItems": true,
           "Source": "OwnerConnection",
           "WorkshopItems": []
+        },
+        {
+          "__type": "PlayerShooter",
+          "__guid": "7641b402-ae2b-4aed-8e26-bae5b6e34663",
+          "__enabled": true,
+          "Flags": 0,
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null,
+          "SpawnOffset": 50
         }
       ],
       "Children": [
@@ -500,8 +513,8 @@
               "__version": 2,
               "Flags": 0,
               "Name": "foodkit_meat-sausage",
-              "Position": "6.22804,2.12681,30.25788",
-              "Rotation": "0.1844351,-0.700206,0.6696915,0.1649489",
+              "Position": "6.172763,2.137853,30.13442",
+              "Rotation": "0.1893869,-0.700662,0.6679338,0.164529",
               "Scale": "0.6300004,0.6400003,1",
               "Tags": "",
               "Enabled": true,
@@ -2756,13 +2769,13 @@
       "CustomBounds": false
     },
     "GameObjectSystems": {
-      "Sandbox.MovieMaker.MovieRecorderSystem": {
-        "DisableClientRecording": false
-      },
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "57bc04a0-f158-4a02-987f-a27719f99d58"
+          "$blob": "c325336e-54f7-4ade-b99f-2af5f8d2dc23"
         }
+      },
+      "Sandbox.MovieMaker.MovieRecorderSystem": {
+        "DisableClientRecording": false
       }
     }
   },
