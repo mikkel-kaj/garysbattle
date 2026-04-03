@@ -560,7 +560,7 @@
           "__version": 2,
           "Flags": 0,
           "Name": "Body",
-          "Position": "0,0,35.79177",
+          "Position": "0,0,0",
           "Rotation": "0,0,0,1",
           "Scale": "1,1,1",
           "Tags": "",
@@ -909,7 +909,7 @@
     "GameObjectSystems": {
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "ccb6c3ec-dcc1-4db2-95b6-aec9f9f87a02"
+          "$blob": "3c52fe0b-4741-4d07-ba0e-134549341fff"
         }
       },
       "Sandbox.MovieMaker.MovieRecorderSystem": {
