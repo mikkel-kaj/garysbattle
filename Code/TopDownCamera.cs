@@ -1,4 +1,5 @@
 using Sandbox;
+using Sandbox.Citizen;
 
 /// <summary>
 /// Top-down camera that follows a target and rotates it to face the mouse cursor.
@@ -77,7 +78,7 @@ public sealed class TopDownCamera : Component
 		//
 		// We use Left instead of Right because s&box's screen X is mirrored vs world Y.
 		// We negate screenUp because screen Y goes downward but "up" means forward in world.
-		var screenRight = camera.WorldRotation.Left.WithZ( 0 ).Normal;
+		var screenRight = camera.WorldRotation.Right.WithZ( 0 ).Normal;
 		var screenUp = camera.WorldRotation.Up.WithZ( 0 ).Normal;
 
 		// Change of basis: screen pixels → world ground direction
@@ -87,6 +88,22 @@ public sealed class TopDownCamera : Component
 		if ( aimDirection.Length > 0.1f )
 		{
 			Target.WorldRotation = Rotation.LookAt( aimDirection );
+		}
+
+		// Drive walk/idle animations manually since UseAnimatorControls is off
+		var renderer = Target.GetComponentInChildren<SkinnedModelRenderer>();
+		if ( renderer is not null )
+		{
+			var pc = Target.GetComponent<PlayerController>();
+			if ( pc is not null )
+			{
+				var helper = new CitizenAnimationHelper();
+				helper.Target = renderer;
+				helper.WithVelocity( pc.Velocity );
+				helper.IsGrounded = pc.IsOnGround;
+				helper.IsSwimming = pc.IsSwimming;
+				helper.IsClimbing = pc.IsClimbing;
+			}
 		}
 
 		if ( ShowDebugVectors )
@@ -109,9 +126,6 @@ public sealed class TopDownCamera : Component
 		var origin = Target.WorldPosition + Vector3.Up * 5f;
 		var length = 80f;
 
-		// Negate for display — the math vectors point opposite to their visual screen direction
-		// because screen X maps to world Left, and screen Y is inverted vs world Forward
-
 		// Red arrow: "screen right" (negated — screen X maps to world Left)
 		Gizmo.Draw.Color = Color.Red;
 		Gizmo.Draw.Arrow( origin, origin + -screenRight * length, 4f, 2f );
@@ -120,12 +134,8 @@ public sealed class TopDownCamera : Component
 		Gizmo.Draw.Color = Color.Blue;
 		Gizmo.Draw.Arrow( origin, origin + screenUp * length, 4f, 2f );
 
-		// Green arrow: where the player is actually facing
-		// Gizmo has X axis flipped vs world, so we negate it for display
-		var facing = Target.WorldRotation.Forward;
-		var displayFacing = new Vector3( -facing.x, facing.y, facing.z );
 		Gizmo.Draw.Color = Color.Green;
-		Gizmo.Draw.Arrow( origin, origin + -displayFacing * length * 1.5f, 4f, 2f );
+		Gizmo.Draw.Arrow( origin, origin + aimDirection * length * 1.5f, 4f, 2f );
 
 		// Screen text labels
 		var camera = Scene.Camera;

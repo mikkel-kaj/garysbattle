@@ -433,8 +433,8 @@
             "component_type": "SkinnedModelRenderer"
           },
           "RotateWithGround": true,
-          "RotationAngleLimit": 45,
-          "RotationSpeed": 1,
+          "RotationAngleLimit": 360,
+          "RotationSpeed": 10,
           "RunByDefault": false,
           "RunSpeed": 320,
           "ShowColliderComponents": false,
@@ -446,7 +446,7 @@
           "UseCameraControls": false,
           "UseFovFromPreferences": true,
           "UseInputControls": true,
-          "UseLookControls": true,
+          "UseLookControls": false,
           "WalkSpeed": 110
         },
         {
@@ -910,7 +910,7 @@
     "GameObjectSystems": {
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "04f03c51-ec66-4f08-aa8a-b80ae694502a"
+          "$blob": "fbb5d682-d519-40ed-a250-c9f4b7dca88c"
         }
       },
       "Sandbox.MovieMaker.MovieRecorderSystem": {
