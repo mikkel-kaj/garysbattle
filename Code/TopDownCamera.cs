@@ -88,6 +88,13 @@ public sealed class TopDownCamera : Component
 		if ( aimDirection.Length > 0.1f )
 		{
 			Target.WorldRotation = Rotation.LookAt( aimDirection );
+
+			// Sync EyeAngles so swim/climb modes move in the facing direction
+			var pc = Target.GetComponent<PlayerController>();
+			if ( pc is not null )
+			{
+				pc.EyeAngles = Target.WorldRotation.Angles();
+			}
 		}
 
 		// Drive walk/idle animations manually since UseAnimatorControls is off
