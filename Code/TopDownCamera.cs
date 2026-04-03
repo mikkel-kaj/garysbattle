@@ -78,7 +78,7 @@ public sealed class TopDownCamera : Component
 		// We use Left instead of Right because s&box's screen X is mirrored vs world Y.
 		// We negate screenUp because screen Y goes downward but "up" means forward in world.
 		var screenRight = camera.WorldRotation.Left.WithZ( 0 ).Normal;
-		var screenUp = camera.WorldRotation.Forward.WithZ( 0 ).Normal;
+		var screenUp = camera.WorldRotation.Up.Normal;
 
 		// Change of basis: screen pixels → world ground direction
 		// "go (Δx pixels) in the screenRight direction, then (Δy pixels) in the screenUp direction"
